@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agro Logistics Hub - Dashboard Inovasi Spasial</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              navy: '#0F2537', fresh: '#69B34C', teal: '#2292A4', slate: '#2A5B75', danger: '#EF4444', warning: '#F59E0B'
+            },
+            animation: {
+              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- FontAwesome Ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet JS & CSS Paling Stabil -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        html { scroll-behavior: smooth; }
+        #map { width: 100%; height: 500px; z-index: 10; }
+        .custom-popup .leaflet-popup-content-wrapper { background-color: #0F2537; color: white; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); }
+        .custom-popup .leaflet-popup-tip { background-color: #0F2537; }
+        .route-line { stroke-dasharray: 10; animation: dash 15s linear infinite; }
+        @keyframes dash { to { stroke-dashoffset: -1000; } }
+        .modal { transition: opacity 0.3s ease; }
+    </style>
+</head>
+<body class="bg-[#F4F7F9] text-gray-800 font-sans">
+
+    <!-- NAVBAR EKSKLUSIF -->
+    <nav class="bg-white shadow-lg p-3 sticky top-0 z-50 border-b-2 border-fresh">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="window.scrollTo(0,0)">
+                <img src="Logo nya saja_2.jpeg" alt="Logo Agro Logistics Hub" class="h-14 w-14 object-contain rounded-full shadow-md border-2 border-gray-100" onerror="this.src='https://via.placeholder.com/50?text=Logo'">
+                <div>
+                    <h1 class="font-extrabold text-2xl text-navy tracking-tight leading-none mb-1">AGRO LOGISTICS HUB</h1>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs bg-fresh text-white px-2 py-0.5 rounded-full font-bold">Inovasi SDGs</span>
+                        <p class="text-[11px] text-teal font-semibold">Simpul Spasial Pangan Inklusif</p>
+                    </div>
+                </div>
+            </div>
+            <div class="hidden lg:flex space-x-8 font-bold text-gray-600 text-sm">
+                <a href="#peta-section" class="hover:text-teal transition border-b-2 border-transparent hover:border-teal pb-1"><i class="fas fa-map-marked-alt mr-1"></i> Peta Tematik</a>
+                <a href="#stok-section" class="hover:text-teal transition border-b-2 border-transparent hover:border-teal pb-1"><i class="fas fa-boxes mr-1"></i> Inventaris Hub</a>
+                <a href="#panel-section" class="hover:text-teal transition border-b-2 border-transparent hover:border-teal pb-1"><i class="fas fa-route mr-1"></i> Distribusi Rute</a>
+                <a href="javascript:void(0)" onclick="toggleLayananModal()" class="hover:text-teal transition border-b-2 border-transparent hover:border-teal pb-1"><i class="fas fa-cogs mr-1"></i> Layanan</a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button onclick="toggleAuthModal()" class="bg-navy hover:bg-slate text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-lg hover:shadow-xl transition flex items-center">
+                    <i class="fas fa-user-circle mr-2 text-lg"></i> Portal Akun
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- KONTEN UTAMA -->
+    <main class="max-w-7xl mx-auto mt-6 p-4">
+        
+        <!-- DASHBOARD GEOSPASIAL & STOK -->
+        <div class="flex items-center justify-between mb-4 border-l-4 border-fresh pl-3">
+            <h2 id="peta-section" class="text-2xl font-black text-navy">Dashboard Analitik Geospasial</h2>
+            <div class="hidden md:flex space-x-2">
+                <img src="SDG 2.jpg" alt="SDG 2" class="h-8 w-8 rounded object-cover shadow" title="SDG 2: Zero Hunger">
+                <img src="SDG 11.jpg" alt="SDG 11" class="h-8 w-8 rounded object-cover shadow" title="SDG 11: Sustainable Cities">
+                <img src="SDG 12.jpg" alt="SDG 12" class="h-8 w-8 rounded object-cover shadow" title="SDG 12: Responsible Consumption">
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            
+            <!-- Panel Peta Interaktif -->
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden flex flex-col relative group">
+                <div class="bg-navy p-3.5 flex justify-between items-center text-white z-20 shadow-md">
+                    <h3 class="font-bold text-sm tracking-wider uppercase"><i class="fas fa-satellite text-teal mr-2"></i> Pemetaan Food Desert & Jaringan Hub</h3>
+                    <div class="flex items-center space-x-2 text-xs font-semibold">
+                        <span class="bg-danger px-2 py-1 rounded animate-pulse"><i class="fas fa-broadcast-tower mr-1"></i> Live</span>
+                    </div>
+                </div>
+                
+                <div id="map" class="w-full h-[500px] relative z-10"></div>
+                
+                <div class="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-lg z-[1000] border border-gray-200 pointer-events-none">
+                    <h4 class="text-xs font-bold text-gray-700 mb-2 border-b pb-1">Legenda Zonasi</h4>
+                    <div class="flex items-center text-xs text-gray-600 mb-1"><span class="w-3 h-3 rounded-full bg-fresh opacity-80 mr-2 border border-green-600"></span> Zona Aman Pasokan</div>
+                    <div class="flex items-center text-xs text-gray-600 mb-1"><span class="w-3 h-3 rounded-full bg-danger opacity-80 mr-2 border border-red-600"></span> Zona Merah (Rawan)</div>
+                </div>
+            </div>
+
+            <!-- Panel Stok & Kapasitas Pangan -->
+            <div id="stok-section" class="bg-white rounded-2xl shadow-xl border border-gray-200 flex flex-col overflow-hidden">
+                <div class="bg-gradient-to-r from-teal to-slate p-4 text-white shadow-md">
+                    <h3 class="font-bold text-sm tracking-wider uppercase"><i class="fas fa-database mr-2"></i> Kapasitas Hub Utama</h3>
+                    <p class="text-[10px] opacity-80 mt-1">Sistem Pemantauan Rantai Dingin (Cold Storage)</p>
+                </div>
+                <div class="p-5 flex-1 flex flex-col space-y-5 bg-gray-50">
+                    
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center"><span class="text-2xl mr-3">🍚</span> <span class="font-bold text-sm text-gray-700 uppercase">Beras Premium</span></div>
+                            <span class="font-black text-lg text-navy">1.250 <span class="text-xs text-gray-500 font-normal">Ton</span></span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-fresh h-2.5 rounded-full" style="width: 85%"></div>
+                        </div>
+                        <p class="text-[10px] text-right mt-1 text-gray-500 font-bold">Kapasitas 85% Terisi</p>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center"><span class="text-2xl mr-3">🥬</span> <span class="font-bold text-sm text-gray-700 uppercase">Sayur Segar</span></div>
+                            <span class="font-black text-lg text-navy">450 <span class="text-xs text-gray-500 font-normal">Ton</span></span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-teal h-2.5 rounded-full" style="width: 60%"></div>
+                        </div>
+                        <p class="text-[10px] text-right mt-1 text-gray-500 font-bold">Kapasitas 60% Terisi</p>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center"><span class="text-2xl mr-3">🥩</span> <span class="font-bold text-sm text-gray-700 uppercase">Daging & Ikan</span></div>
+                            <span class="font-black text-lg text-navy">300 <span class="text-xs text-gray-500 font-normal">Ton</span></span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-danger h-2.5 rounded-full" style="width: 40%"></div>
+                        </div>
+                        <p class="text-[10px] text-right mt-1 text-danger font-bold">Peringatan: Stok Menipis (40%)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL LAYANAN DISTRIBUSI & TRANSPARANSI HARGA -->
+        <h2 id="panel-section" class="text-2xl font-black text-navy mb-4 border-l-4 border-teal pl-3 pt-6 mt-4">Integrasi Pasar Rakyat & Rute</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
+            
+            <!-- Simulasi Pemesanan & Algoritma Rute -->
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-7 relative overflow-hidden">
+                <div class="absolute -right-10 -top-10 text-9xl text-gray-50 opacity-40 z-0 rotate-12"><i class="fas fa-route"></i></div>
+                <div class="relative z-10">
+                    <div class="flex items-center mb-6 border-b pb-4">
+                        <div class="bg-navy p-3.5 rounded-xl text-white shadow-lg mr-4"><i class="fas fa-truck-loading text-xl"></i></div>
+                        <div>
+                            <h3 class="font-black text-xl text-navy leading-tight">Optimalisasi Rute Logistik</h3>
+                            <p class="text-teal text-xs font-bold mt-1">Simulasi Pemesanan Komunitas ke Hub Terdekat</p>
+                        </div>
+                    </div>
+                    
+                    <form onsubmit="event.preventDefault(); optimasiRute();">
+                        <div class="mb-5">
+                            <label class="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Pilih Lokasi Permukiman/Pasar</label>
+                            <select id="lokasiInput" class="w-full border-2 border-gray-200 px-4 py-3.5 rounded-xl focus:border-teal focus:ring-0 bg-gray-50 font-semibold text-navy outline-none appearance-none cursor-pointer">
+                                <option value="Pasar Kosambi, Zona Aman">Pasar Kosambi (Berada di Zona Aman)</option>
+                                <option value="Permukiman Cicaheum, Food Desert">Permukiman Cicaheum (Rawan Pangan / Zona Merah)</option>
+                                <option value="Pasar Baru">Pasar Baru Trade Center</option>
+                            </select>
+                        </div>
+                        <button type="submit" id="btnRute" class="w-full bg-fresh hover:bg-green-600 text-white font-black py-4 rounded-xl shadow-lg hover:shadow-xl transition-all flex justify-center items-center text-lg">
+                            <i class="fas fa-satellite-dish mr-2"></i> Hitung Rute Tercepat
+                        </button>
+                    </form>
+                    
+                    <div id="notifikasiPanel" class="hidden mt-6 bg-teal/10 border-l-4 border-teal p-4 rounded-r-xl" role="alert">
+                        <div class="flex">
+                            <i class="fas fa-check-circle text-teal text-2xl mr-3 mt-1"></i>
+                            <div>
+                                <strong class="font-black text-teal block text-sm">Algoritma Rute Selesai!</strong>
+                                <span class="block text-sm mt-1 text-gray-700" id="notifPesan">Jalur logistik terpendek berhasil dipetakan ke Hub Mikro. Silakan lihat peta.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabel Transparansi & Prediksi Harga -->
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-0 overflow-hidden flex flex-col">
+                <div class="bg-slate p-6 text-white flex justify-between items-center">
+                    <div>
+                        <h3 class="font-black text-xl leading-tight text-white mb-1">Transparansi Harga Eceran</h3>
+                        <p class="text-teal-200 text-xs font-bold">Terintegrasi Sistem Pantau Harian</p>
+                    </div>
+                    <i class="fas fa-chart-line text-4xl opacity-30"></i>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-gray-500 font-bold text-xs uppercase tracking-wider">
+                            <tr>
+                                <th class="p-4 pl-6">Komoditas</th>
+                                <th class="p-4">Harga / Kg</th>
+                                <th class="p-4 text-center">Tren AI</th>
+                                <th class="p-4">Status & Intervensi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-800 font-semibold bg-white divide-y divide-gray-100">
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="p-4 pl-6 flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-fresh mr-3 shadow-sm"></span> Beras Premium</td>
+                                <td class="p-4 font-black text-navy">Rp 13.500</td>
+                                <td class="p-4 text-center"><i class="fas fa-minus text-gray-400" title="Stabil"></i></td>
+                                <td class="p-4"><span class="bg-green-100 text-green-700 py-1 px-3 rounded-md text-[10px] font-bold uppercase tracking-wider">Aman</span></td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="p-4 pl-6 flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-teal mr-3 shadow-sm"></span> Sayur Pakcoy</td>
+                                <td class="p-4 font-black text-navy">Rp 12.000</td>
+                                <td class="p-4 text-center"><i class="fas fa-arrow-down text-fresh" title="Turun"></i></td>
+                                <td class="p-4"><span class="bg-green-100 text-green-700 py-1 px-3 rounded-md text-[10px] font-bold uppercase tracking-wider">Aman</span></td>
+                            </tr>
+                            <tr class="bg-red-50/30 hover:bg-red-50 transition">
+                                <td class="p-4 pl-6 flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-danger mr-3 shadow-sm"></span> Cabai Rawit</td>
+                                <td class="p-4 font-black text-danger">Rp 75.000</td>
+                                <td class="p-4 text-center"><i class="fas fa-arrow-up text-danger animate-bounce" title="Naik Tajam"></i></td>
+                                <td class="p-4"><span class="bg-red-100 border border-red-200 text-red-700 py-1 px-2 rounded-md text-[10px] font-bold uppercase tracking-wider">Operasi Pasar</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL LAYANAN KAMI (INTERAKTIF & KLIK)                                    -->
+    <!-- ========================================================================= -->
+    <div id="layananModal" class="modal hidden fixed inset-0 bg-navy/80 z-[9999] flex justify-center items-center backdrop-blur-md transition-all duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-[600px] max-w-[95%] overflow-hidden relative p-8">
+            <button onclick="toggleLayananModal()" class="absolute top-4 right-4 text-gray-400 hover:text-danger hover:bg-red-50 p-2 rounded-full transition"><i class="fas fa-times text-lg"></i></button>
+            <div class="flex items-center mb-6 border-b pb-4">
+                <div class="bg-teal p-3.5 rounded-xl text-white shadow-md mr-4"><i class="fas fa-cogs text-2xl"></i></div>
+                <div>
+                    <h2 class="text-2xl font-black text-navy">Layanan Unggulan Agro Hub</h2>
+                    <p class="text-xs text-teal font-bold mt-1">Infrastruktur Digital & Fisik Rantai Pasok Pangan</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-teal hover:shadow-md transition cursor-pointer" onclick="alert('Layanan Cold Storage aktif: Menjaga kesegaran komoditas hortikultura dengan suhu terkontrol.')">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="bg-teal/10 text-teal p-2.5 rounded-lg"><i class="fas fa-snowflake text-lg"></i></div>
+                        <h4 class="font-bold text-sm text-navy">Cold Storage Mandiri</h4>
+                    </div>
+                    <p class="text-xs text-gray-500">Penyimpanan rantai dingin berbasis energi terbarukan untuk menekan susut pangan (*food loss*).</p>
+                </div>
+
+                <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-fresh hover:shadow-md transition cursor-pointer" onclick="alert('Layanan Rute Cerdas: Algoritma spasial memangkas biaya distribusi logistik perkotaan.')">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="bg-fresh/10 text-fresh p-2.5 rounded-lg"><i class="fas fa-route text-lg"></i></div>
+                        <h4 class="font-bold text-sm text-navy">Rute Distribusi Cerdas</h4>
+                    </div>
+                    <p class="text-xs text-gray-500">Optimasi jalur distribusi dari produsen desa langsung ke hub mikro perkotaan secara real-time.</p>
+                </div>
+
+                <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-warning hover:shadow-md transition cursor-pointer" onclick="alert('Pemantauan Food Desert: Deteksi wilayah rawan akses pangan guna intervensi operasi pasar.')">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="bg-warning/10 text-warning p-2.5 rounded-lg"><i class="fas fa-map-marked-alt text-lg"></i></div>
+                        <h4 class="font-bold text-sm text-navy">Mitigasi Food Desert</h4>
+                    </div>
+                    <p class="text-xs text-gray-500">Pemetaan spasial wilayah perkotaan yang minim akses pangan segar untuk pemerataan gizi masyarakat.</p>
+                </div>
+
+                <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-navy hover:shadow-md transition cursor-pointer" onclick="alert('Transparansi Pasar: Integrasi data harga pangan untuk kestabilan inflasi daerah.')">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="bg-navy/10 text-navy p-2.5 rounded-lg"><i class="fas fa-chart-line text-lg"></i></div>
+                        <h4 class="font-bold text-sm text-navy">Transparansi Pasar</h4>
+                    </div>
+                    <p class="text-xs text-gray-500">Pusat informasi harga komoditas pangan harian guna mencegah disparitas harga antar wilayah.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL AUTENTIKASI DUAL-STATE (LOGIN & REGISTER DENGAN GMAIL)              -->
+    <!-- ========================================================================= -->
+    <div id="authModal" class="modal hidden fixed inset-0 bg-navy/80 z-[9999] flex justify-center items-center backdrop-blur-md transition-all duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-[400px] max-w-[95%] overflow-hidden relative transform scale-95 transition-transform duration-300" id="authBox">
+            <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-danger hover:bg-red-50 p-2 rounded-full transition z-10"><i class="fas fa-times"></i></button>
+            <div class="bg-gray-50 pt-8 pb-4 text-center border-b border-gray-200">
+                <img src="Logo nya saja_2.jpeg" alt="Logo" class="h-16 w-16 mx-auto mb-3 rounded-full shadow border-2 border-white" onerror="this.src='https://via.placeholder.com/50'">
+                <h2 class="text-xl font-black text-navy">Portal Sistem Agro</h2>
+            </div>
+            <div class="flex border-b border-gray-200 bg-gray-50">
+                <button id="tabLoginBtn" onclick="switchTab('login')" class="flex-1 py-3 text-sm font-bold border-b-2 border-teal text-teal bg-white transition">Masuk Akun</button>
+                <button id="tabRegBtn" onclick="switchTab('register')" class="flex-1 py-3 text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition">Daftar Baru</button>
+            </div>
+
+            <div class="p-7">
+                <!-- FORM LOGIN -->
+                <form id="formLogin" class="space-y-4 block" onsubmit="event.preventDefault(); prosesAuth('Login Berhasil!');">
+                    <p class="text-xs text-gray-500 font-bold mb-4 text-center">Silakan login jika Anda sudah memiliki akun.</p>
+                    <div class="relative">
+                        <i class="fab fa-google absolute left-4 top-3.5 text-gray-400"></i>
+                        <input type="email" required placeholder="Alamat Gmail (@gmail.com)" class="w-full border-2 border-gray-200 pl-11 pr-4 py-3 rounded-xl focus:border-teal focus:outline-none text-sm font-semibold">
+                    </div>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-4 top-3.5 text-gray-400"></i>
+                        <input type="password" required placeholder="Password Anda" class="w-full border-2 border-gray-200 pl-11 pr-4 py-3 rounded-xl focus:border-teal focus:outline-none text-sm font-semibold">
+                    </div>
+                    <button type="submit" class="w-full bg-navy hover:bg-slate text-white font-black py-3.5 rounded-xl transition shadow-md hover:shadow-lg mt-2">Login ke Dashboard</button>
+                </form>
+
+                <!-- FORM REGISTER -->
+                <form id="formRegister" class="space-y-4 hidden" onsubmit="event.preventDefault(); prosesAuth('Pendaftaran Berhasil! Akun terhubung.');">
+                    <div class="relative">
+                        <i class="fas fa-id-card absolute left-4 top-3.5 text-gray-400"></i>
+                        <input type="text" required placeholder="Nama Lengkap" class="w-full border-2 border-gray-200 pl-11 pr-4 py-3 rounded-xl focus:border-teal focus:outline-none text-sm font-semibold">
+                    </div>
+                    <div class="relative">
+                        <i class="fab fa-google absolute left-4 top-3.5 text-danger"></i>
+                        <input type="email" required placeholder="Alamat Gmail Utama" class="w-full border-2 border-gray-200 pl-11 pr-4 py-3 rounded-xl focus:border-teal focus:outline-none text-sm font-semibold">
+                    </div>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-4 top-3.5 text-gray-400"></i>
+                        <input type="password" required placeholder="Buat Password" class="w-full border-2 border-gray-200 pl-11 pr-4 py-3 rounded-xl focus:border-teal focus:outline-none text-sm font-semibold">
+                    </div>
+                    <div class="relative">
+                        <i class="fas fa-user-tag absolute left-4 top-3.5 text-gray-400 z-10"></i>
+                        <select required class="w-full border-2 border-gray-200 pl-11 pr-4 py-3 rounded-xl focus:border-teal focus:outline-none text-sm font-semibold appearance-none bg-white relative">
+                            <option value="" disabled selected>Pilih Peran Pendaftar...</option>
+                            <option value="komunitas">Komunitas / Pedagang Pasar</option>
+                            <option value="pengelola">Pengelola Hub Logistik</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-teal hover:bg-navy text-white font-black py-3.5 rounded-xl transition shadow-md hover:shadow-lg mt-2"><i class="fas fa-user-plus mr-1"></i> Daftar & Buat Akun</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- SCRIPT JAVASCRIPT (MAPS, ROUTING & UI LOGIC)                              -->
+    <!-- ========================================================================= -->
+    <script>
+        var petaUtama;
+        var ruteLineAktif; 
+        var userMarkerAktif;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            try {
+                petaUtama = L.map('map', { zoomControl: false }).setView([-6.914744, 107.609810], 12.5);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(petaUtama);
+                
+                L.control.zoom({ position: 'topright' }).addTo(petaUtama);
+
+                setTimeout(function(){ petaUtama.invalidateSize(); }, 500);
+
+                var greenZone = L.circle([-6.920, 107.630], { 
+                    color: '#69B34C', fillColor: '#69B34C', fillOpacity: 0.15, radius: 3000, weight: 2, dashArray: '5, 5'
+                }).addTo(petaUtama);
+                greenZone.bindPopup("<div class='text-center'><b>ZONA AMAN (TERCUKUPI)</b><br><span class='text-xs'>Akses logistik lancar.</span></div>", {className: 'custom-popup'});
+
+                var redZone = L.circle([-6.890, 107.570], { 
+                    color: '#EF4444', fillColor: '#EF4444', fillOpacity: 0.15, radius: 2200, weight: 2, dashArray: '5, 5'
+                }).addTo(petaUtama);
+                redZone.bindPopup("<div class='text-center'><b>FOOD DESERT (RAWAN)</b><br><span class='text-xs'>Prioritas intervensi hub.</span></div>", {className: 'custom-popup'});
+
+                var hubUtamaIcon = L.divIcon({ html: '<div class="bg-navy text-white w-10 h-10 rounded-full flex items-center justify-center border-2 border-white shadow-lg"><i class="fas fa-warehouse text-lg"></i></div>', className: '', iconSize: [40,40], iconAnchor: [20,20] });
+                var hubMikroIcon = L.divIcon({ html: '<div class="bg-teal text-white w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-md"><i class="fas fa-store text-sm"></i></div>', className: '', iconSize: [32,32], iconAnchor: [16,16] });
+
+                L.marker([-6.950, 107.650], {icon: hubUtamaIcon}).addTo(petaUtama).bindPopup("<b>Hub Utama (Cold Storage)</b>", {className: 'custom-popup'});
+                L.marker([-6.925, 107.625], {icon: hubMikroIcon}).addTo(petaUtama).bindPopup("<b>Hub Mikro A</b><br>Kapasitas: Optimal", {className: 'custom-popup'});
+                L.marker([-6.885, 107.580], {icon: hubMikroIcon}).addTo(petaUtama).bindPopup("<b>Hub Mikro B</b><br>Strategis Penyangga Food Desert", {className: 'custom-popup'});
+
+            } catch(e) {
+                console.error("Peta Gagal: ", e);
+                document.getElementById('map').innerHTML = "<div class='flex h-full items-center justify-center bg-gray-200 font-bold text-red-500'>Gagal Memuat Peta. Pastikan koneksi internet aktif.</div>";
+            }
+        });
+
+        function optimasiRute() {
+            if(!petaUtama) return alert("Peta belum siap.");
+            
+            var select = document.getElementById("lokasiInput");
+            var lokasiNama = select.options[select.selectedIndex].text;
+            var lokasiValue = select.value;
+            var btn = document.getElementById("btnRute");
+            var notif = document.getElementById("notifikasiPanel");
+            
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> Mengkalkulasi Algoritma...';
+            btn.classList.replace('bg-fresh', 'bg-slate');
+            
+            if(ruteLineAktif) petaUtama.removeLayer(ruteLineAktif);
+            if(userMarkerAktif) petaUtama.removeLayer(userMarkerAktif);
+
+            setTimeout(function() {
+                btn.innerHTML = '<i class="fas fa-check-double mr-2"></i> Rute Ditemukan';
+                btn.classList.replace('bg-slate', 'bg-teal');
+                notif.classList.remove("hidden");
+                
+                var userLat, userLng, hubTujuanLat, hubTujuanLng, namaHub;
+                var userIcon = L.divIcon({ html: '<div class="bg-warning text-white w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce"><i class="fas fa-map-marker-alt"></i></div>', className: '', iconSize: [32,32], iconAnchor: [16,16] });
+
+                if (lokasiValue.includes("Food Desert")) {
+                    userLat = -6.895; userLng = 107.560; 
+                    hubTujuanLat = -6.885; hubTujuanLng = 107.580; 
+                    namaHub = "Hub Mikro B";
+                } else {
+                    userLat = -6.915; userLng = 107.620; 
+                    hubTujuanLat = -6.925; hubTujuanLng = 107.625; 
+                    namaHub = "Hub Mikro A";
+                }
+
+                document.getElementById("notifPesan").innerHTML = "Sistem menetapkan <b>" + namaHub + "</b>. Garis rute logistik telah dipetakan.";
+
+                userMarkerAktif = L.marker([userLat, userLng], {icon: userIcon}).addTo(petaUtama).bindPopup("<b>Lokasi Pemesan:</b><br>" + lokasiNama).openPopup();
+                
+                ruteLineAktif = L.polyline([[userLat, userLng], [hubTujuanLat, hubTujuanLng]], {
+                    color: '#2292A4', weight: 4, className: 'route-line'
+                }).addTo(petaUtama);
+
+                window.location.hash = "#peta-section";
+                
+                var bounds = new L.LatLngBounds([[userLat, userLng], [hubTujuanLat, hubTujuanLng]]);
+                petaUtama.flyToBounds(bounds, { padding: [50, 50], maxZoom: 14, duration: 1.5 });
+                
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-satellite-dish mr-2"></i> Hitung Ulang Rute';
+                    btn.classList.replace('bg-teal', 'bg-fresh');
+                }, 4000);
+
+            }, 1500); 
+        }
+
+        // --- FUNGSI MODAL LAYANAN ---
+        function toggleLayananModal() {
+            var m = document.getElementById('layananModal');
+            m.classList.toggle('hidden');
+        }
+
+        // --- FUNGSI MODAL & TAB AKUN ---
+        function toggleAuthModal() {
+            var m = document.getElementById('authModal');
+            var box = document.getElementById('authBox');
+            if (m.classList.contains('hidden')) {
+                m.classList.remove('hidden');
+                setTimeout(() => { box.classList.remove('scale-95'); box.classList.add('scale-100'); }, 10);
+            } else {
+                box.classList.remove('scale-100'); box.classList.add('scale-95');
+                setTimeout(() => { m.classList.add('hidden'); }, 300); 
+            }
+        }
+
+        function switchTab(type) {
+            var btnLogin = document.getElementById('tabLoginBtn');
+            var btnReg = document.getElementById('tabRegBtn');
+            var frmLogin = document.getElementById('formLogin');
+            var frmReg = document.getElementById('formRegister');
+
+            if(type === 'login') {
+                btnLogin.className = "flex-1 py-3 text-sm font-bold border-b-2 border-teal text-teal bg-white transition";
+                btnReg.className = "flex-1 py-3 text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition bg-gray-50";
+                frmLogin.classList.remove('hidden'); frmReg.classList.add('hidden');
+            } else {
+                btnReg.className = "flex-1 py-3 text-sm font-bold border-b-2 border-teal text-teal bg-white transition";
+                btnLogin.className = "flex-1 py-3 text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition bg-gray-50";
+                frmReg.classList.remove('hidden'); frmLogin.classList.add('hidden');
+            }
+        }
+
+        function prosesAuth(pesanSukses) {
+            alert(pesanSukses);
+            document.getElementById('formLogin').reset();
+            document.getElementById('formRegister').reset();
+            toggleAuthModal();
+        }
+    </script>
+</body>
+</html>
